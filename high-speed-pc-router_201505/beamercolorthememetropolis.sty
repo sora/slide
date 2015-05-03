@@ -1,0 +1,87 @@
+% Beamer mtheme
+%
+% Copyright 2014 Matthias Vogelgesang
+% Licensed under CC-BY-SA 4.0 International.
+%
+% The initial template comes from the HSRM beamer theme by Benjamin Weiss, which
+% you can find at https://github.com/hsrmbeamertheme/hsrmbeamertheme.
+%
+
+\ProvidesPackage{beamercolorthememetropolis}
+
+
+%}}}
+%{{{ --- Options ----------------------
+
+\newif\if@beamer@metropolis@blockbg
+\@beamer@metropolis@blockbgfalse
+\DeclareOptionBeamer{blockbg}{\@beamer@metropolis@blockbgtrue}
+
+\DeclareOptionBeamer*{%
+  \PackageWarning{beamercolorthememetropolis}{Unknown option `\CurrentOption'}%
+}
+
+\ProcessOptionsBeamer
+
+%}}}
+%{{{ --- Colors ---------------------
+
+% http://paletton.com/#uid=7050t0kkJkJsntwoyp6gYgoddc4
+
+\definecolor{mDarkBrown}{HTML}{604c38}
+%\definecolor{mDarkTeal}{HTML}{23373b}
+%\definecolor{mDarkTeal}{HTML}{4A593D}
+\definecolor{mDarkTeal}{HTML}{0F4C3A}
+
+\definecolor{mLightBrown}{HTML}{0c0c0c}
+\definecolor{mMediumBrown}{HTML}{C87A2F}
+
+%% sora
+\definecolor{sRO}{HTML}{0C0C0C}
+\definecolor{sMASUHANA}{HTML}{577C8A}
+\definecolor{sCHITOSEMIDORI}{HTML}{36563C}
+\definecolor{sTETSUKON}{HTML}{261E47}
+\definecolor{sONANDOCHA}{HTML}{465D4C}
+\definecolor{sKACHI}{HTML}{08192D}
+\definecolor{sNOSHIMEHANA}{HTML}{2B5F75}
+\definecolor{sAIMIRUCHA}{HTML}{0F4C3A}
+\definecolor{sGUNJYO}{HTML}{51A8DD}
+\definecolor{sKANZO}{HTML}{FC9F4D}
+%%
+
+\setbeamercolor{palette primary}{fg=mDarkTeal, bg=black!2}
+\setbeamercolor{palette secondary}{fg=white, bg=mDarkTeal}
+\setbeamercolor{palette quaternary}{fg=mDarkBrown}
+\setbeamercolor{palette tertiary}{fg=white, bg=mMediumBrown}
+
+\setbeamercolor{title}{fg=mDarkTeal}
+\setbeamercolor{subtitle}{fg=mDarkTeal}
+\setbeamercolor{author}{fg=sRO}
+\setbeamercolor{date}{fg=sRO}
+\setbeamercolor{institute}{fg=sRO}
+
+\setbeamercolor{section title}{parent=palette primary}
+\setbeamercolor{frametitle}{parent=palette secondary}
+\setbeamercolor{background canvas}{parent=palette primary}
+\setbeamercolor{structure}{fg=mDarkTeal}
+
+\setbeamercolor{normal text}{fg=black!97}
+\setbeamercolor{alerted text}{fg=sKANZO}
+
+\setbeamercolor{footnote}{fg=mDarkTeal!50}
+\setbeamercolor{footnote mark}{fg=.}
+\setbeamercolor{page number in head/foot}{fg=sRO}
+
+\if@beamer@metropolis@blockbg
+
+\setbeamercolor{block title}{use=palette primary,parent=palette primary,bg=palette primary.bg!80!fg}
+\setbeamercolor{block title alerted}{use={palette primary,alerted text},parent=palette primary,fg=alerted text.fg,bg=palette primary.bg!80!fg}
+\setbeamercolor{block title example}{use={palette primary,example text},parent=palette primary,fg=example text.fg,bg=palette primary.bg!80!fg}
+
+\setbeamercolor{block body}{use=block title,parent=normal text,bg=block title.bg!50}
+\setbeamercolor{block body alerted}{use={normal text,block body},parent=normal text,bg=block body.bg}
+\setbeamercolor{block body example}{use={normal text,block body},parent=normal text,bg=block body.bg}
+
+\fi
+
+\mode<all>

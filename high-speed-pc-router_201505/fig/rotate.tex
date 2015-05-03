@@ -1,0 +1,18 @@
+\begin{tikzpicture}
+	\def\couleur{mLightBrown}
+		\path[coordinate] (0,0)  coordinate(A)
+			++( 90:5cm) coordinate(B)
+			++(0:5cm) coordinate(C)
+			++(-90:5cm) coordinate(D);
+		\draw[fill=\couleur!\thedensity] (A) -- (B) -- (C) --(D) -- cycle;
+		\foreach \x in {1,...,40}{%
+		\pgfmathsetcounter{density}{\thedensity+20}
+		\setcounter{density}{\thedensity}
+		\path[coordinate] coordinate(X) at (A){};
+		\path[coordinate] (A) -- (B) coordinate[pos=.10](A)
+			-- (C) coordinate[pos=.10](B)
+			-- (D) coordinate[pos=.10](C)
+			-- (X) coordinate[pos=.10](D);
+		\draw[fill=\couleur!\thedensity] (A)--(B)--(C)-- (D) -- cycle;
+		}
+\end{tikzpicture}
