@@ -17,7 +17,7 @@ view: $(PDF)
 	latexmk -pv
 
 clean:
-	latexmk -c
+	git clean -xfd
 
 distclean:
 	latexmk -C
