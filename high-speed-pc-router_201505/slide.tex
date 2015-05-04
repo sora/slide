@@ -8,11 +8,15 @@
 \usepackage{minted}
 \usepackage{fontawesome}
 \usepackage{gnuplot-lua-tikz}
+\usepackage{tcolorbox}
 
 %%% user macro
 \definecolor{links}{HTML}{DB4D6D} % NAKABENI
 \hypersetup{colorlinks,linkcolor=,urlcolor=links}
 
+\tcbset{
+	width=.9\linewidth
+}
 
 \newcommand{\ehref}[2]{\href{#1}{#2 \hspace{-.2em}{\scriptsize\faExternalLink}}}
 %\newcommand{\eurl}[1]{\url{#1{\scriptsize \hspace{-.2em}\faExternalLink}}}
@@ -113,7 +117,6 @@ union packed {
   \frametitle{Systemverilogによるパケット処理例 [2/3]}
 
 \begin{figure}
-
 \begin{minted}[fontsize=\small]{verilog}
 /* MAC adderss */
 typedef bit [ETH_ALEN-1:0][7:0] macaddr_t;
@@ -133,20 +136,45 @@ typedef struct packed {
 
 %%%%%%%%%%%%%%%%%%%%%%%%%
 
-\begin{frame}{Bar charts}
-  \begin{figure}
-    \input{fig/pcie-lane-bps}
-  \end{figure}
-\end{frame}
+\begin{frame}{マスク(物理)}
 
+\begin{figure}
+\includegraphics[width=.9\textwidth]{pic/x1.png} \\
+\includegraphics[width=.9\textwidth]{pic/x4.png}
+
+\begin{scriptsize}
+\begin{tcolorbox}[]
+\$ sudo lspci -vv\\
+01:00.0 Ethernet controller: Intel Corporation 82599ES\\
+LnkCap: Port \#0, \textbf{Speed 5GT/s, Width x8}, ... \\
+LnkSta: \textbf{Speed 5GT/s, Width x1}, ...
+\end{tcolorbox}
+\end{scriptsize}
+\vspace{-.5em}
+\small{上: x1マスク, 中: x4マスク, 下: x1時のコンソール}
+\end{figure}
+
+
+\end{frame}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%
 
-\begin{frame}{Bar charts}
-  \begin{figure}
-	\resizebox{\textheight}{!}{\input{fig/pcie-lane-bps}}
-  \end{figure}
+\begin{frame}{Throughput for Intel x520 TX}
+	\begin{figure}
+		\resizebox{.7\textwidth}{!}{\input{fig/pcie-lane-bps}}
+	\end{figure}
+	{\footnotesize Theoretical Max. Throughput (PCIe gen2): \\ x1: 5GT/s, x2: 10GT/s, x4: 20GT/s, x8: 40GT/s}
 \end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{frame}{\% of Theoretical Maximum Throughput for Intel x520 TX}
+	\begin{figure}
+		\resizebox{.7\textwidth}{!}{\input{fig/pcie-lane-ratio}}
+	\end{figure}
+	{\footnotesize Theoretical Max. Throughput (PCIe gen2): \\ x1: 5GT/s, x2: 10GT/s, x4: 20GT/s, x8: 40GT/s}
+\end{frame}
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%
 

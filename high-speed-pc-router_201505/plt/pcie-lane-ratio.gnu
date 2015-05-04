@@ -1,5 +1,5 @@
 set terminal tikz color scale .8,.8
-set output "../fig/pcie-lane-bps.tex"
+set output "../fig/pcie-lane-ratio.tex"
 #set terminal png transparent enhanced font "helvetica,14" fontscale 1.0 size 500, 350
 #set output "hoge.png"
 
@@ -28,9 +28,9 @@ set bmargin 8
 set tmargin 0
 set lmargin 9
 set rmargin 0
-set yrange [0:12]
+set yrange [0:100]
 set xlabel "Lane width"
-set ylabel "G bps"
+set ylabel "Throughput (\\%)"
 #plot 'pcielane.dat' using 1:xtic(1) ti col, '' u 2 ti col, '' u 3 ti col, '' u 4 ti col, '' u 5 ti col
-plot 'pcie-lane-bps.dat' u 2:xtic(1) ti col, '' u 3 ti col, '' u 4 ti col, '' u 5 ti col
+plot 'pcie-lane-ratio.dat' u 2:xtic(1) ti col, '' u 3 ti col, '' u 4 ti col, '' u 5 ti col
 
