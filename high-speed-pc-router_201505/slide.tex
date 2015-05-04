@@ -14,9 +14,9 @@
 \definecolor{links}{HTML}{DB4D6D} % NAKABENI
 \hypersetup{colorlinks,linkcolor=,urlcolor=links}
 
-\tcbset{
-	width=.9\linewidth
-}
+%\tcbset{
+%	width=.9\linewidth
+%}
 
 \newcommand{\ehref}[2]{\href{#1}{#2 \hspace{-.2em}{\scriptsize\faExternalLink}}}
 %\newcommand{\eurl}[1]{\url{#1{\scriptsize \hspace{-.2em}\faExternalLink}}}
@@ -28,7 +28,7 @@
 
 \title{マルチポート10G NICの試作}
 \subtitle{}
-%\date{\today}
+\date[\today]{}
 %\author{Name (\ehref{http://twitter.com/twitter}{\faTwitter  twitter})}
 \author{Yohei Kuga@KEIO Univ}
 \institute{高速PCルータ研究会 2015/5}
@@ -40,11 +40,17 @@
 %% -------------------------------------------------- %%
 
 \begin{frame}[fragile,t]{今日の話}
-\begin{itemize}
-\item FPGAで合成可能なSystemVerilogによるパケット処理を考える
-\item NIC Offload機能の整理
-\item Offload拡張機能
-\end{itemize}
+\begin{enumerate}
+\item PCIe NICの基礎体力測定
+\item FPGA+SystemVerilogで合成可能なパケット処理を考える
+\item マルチポート10G NICの設計
+	\begin{itemize}
+	\item Motivation
+	\item その他のFPGA NIC実装
+	\item NIC Offload機能の整理
+	\item 検討中のNICアーキテクチャ
+	\end{itemize}
+\end{enumerate}
 \end{frame}
 
 %% -------------------------------------------------- %%
@@ -86,26 +92,48 @@
 
 \end{frame}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{frame}[fragile,t]
+  \frametitle{Systemverilogによるパケット処理 [2/3]}
+
+\begin{figure}
+\begin{tcolorbox}[title=ethernet\_pkg.sv]
+\begin{minted}[fontsize=\small]{verilog}
+/* MAC adderss */
+typedef bit [ETH_ALEN-1:0][7:0] macaddr_t;
+
+/* ethernet header */
+typedef struct packed {
+    macaddr_t h_dest;
+    macaddr_t h_source;
+    bit [15:0] h_proto;
+} ethhdr;
+\end{minted}
+\end{tcolorbox}
+\end{figure}
+
+\end{frame}
+
 %%%%%%%%%%%%%%%%%%%%%%%
 
 \begin{frame}[fragile,t]
-  \frametitle{Systemverilogによるパケット処理例 [1/3]}
+  \frametitle{Systemverilogによるパケット処理 [1/3]}
 
 \begin{figure}
-
+\begin{tcolorbox}[title=user\_app.sv]
 \begin{minted}[fontsize=\small]{verilog}
 union packed {
-        bit [5:0][63:0] raw;      // XGMII (64bit)
-        struct packed {
-                ethhdr eth;
-                iphdr ip;
-                udphdr udp;
-                bit [47:0] payload;
-        } hdr;
+    bit [5:0][63:0] raw;      // XGMII (64bit)
+    struct packed {
+        ethhdr eth;
+        iphdr ip;
+        udphdr udp;
+        bit [47:0] padding;
+    } hdr;
 } tx_pkt, rx_pkt;
 \end{minted}
-\vspace{-1em}
-\caption{パケット構造}
+\end{tcolorbox}
 \end{figure}
 
 \end{frame}
@@ -114,25 +142,35 @@ union packed {
 
 
 \begin{frame}[fragile,t]
-  \frametitle{Systemverilogによるパケット処理例 [2/3]}
+  \frametitle{Systemverilogによるパケット処理 [3/3]}
+
+\vspace{-1em}
 
 \begin{figure}
+\begin{tcolorbox}[title=TX]
 \begin{minted}[fontsize=\small]{verilog}
-/* MAC adderss */
-typedef bit [ETH_ALEN-1:0][7:0] macaddr_t;
-
-/* ethernet header */
-typedef struct packed {
-        macaddr_t h_dest;
-        macaddr_t h_source;
-        bit [15:0] h_proto;
-} ethhdr;
+// User register to XGMII_TX
+xgmii.data = endian_conv64(tx_pkt.raw[5]);
 \end{minted}
-\vspace{-1em}
-\caption{パケット構造}
+\end{tcolorbox}
+%
+\begin{tcolorbox}[title=RX]
+\begin{minted}[fontsize=\small]{verilog}
+// XGMII_RX to User register
+rx_pkt.raw[5] <= endian_conv64(xgmii_rx.data);
+...
+// packet filtering
+if (rx_pkt.hdr.eth.h_proto == ETH_P_IP &&
+    rx_pkt.hdr.ip.protocol == IP4_PROTO_UDP &&
+    rx_pkt.hdr.udp.dest    == 16'd9) begin
+\end{minted}
+\end{tcolorbox}
 \end{figure}
 
+\vspace{-.5em}
+Raw socket ぽい?
 \end{frame}
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -143,7 +181,7 @@ typedef struct packed {
 \includegraphics[width=.9\textwidth]{pic/x4.png}
 
 \begin{scriptsize}
-\begin{tcolorbox}[]
+\begin{tcolorbox}[width=.9\linewidth]
 \$ sudo lspci -vv\\
 01:00.0 Ethernet controller: Intel Corporation 82599ES\\
 LnkCap: Port \#0, \textbf{Speed 5GT/s, Width x8}, ... \\
@@ -151,7 +189,7 @@ LnkSta: \textbf{Speed 5GT/s, Width x1}, ...
 \end{tcolorbox}
 \end{scriptsize}
 \vspace{-.5em}
-\small{上: x1マスク, 中: x4マスク, 下: x1時のコンソール}
+\small{上: x1マスク, 中: x4マスク, 下: x1時のLink status}
 \end{figure}
 
 
@@ -159,148 +197,52 @@ LnkSta: \textbf{Speed 5GT/s, Width x1}, ...
 
 %%%%%%%%%%%%%%%%%%%%%%%%%
 
-\begin{frame}{Throughput for Intel x520 TX}
+\begin{frame}{Max. TX Throughput (Intel x520)}
 	\begin{figure}
 		\resizebox{.7\textwidth}{!}{\input{fig/pcie-lane-bps}}
 	\end{figure}
-	{\footnotesize Theoretical Max. Throughput (PCIe gen2): \\ x1: 5GT/s, x2: 10GT/s, x4: 20GT/s, x8: 40GT/s}
+	{\footnotesize Theoretical Max. Throughput (PCIe gen2) * 0.8 (8b/10b overhead): \\
+	x1: 4Gbps, x2: 8Gbps, x4: 16Gbps, x8: 32Gbps}
 \end{frame}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%
 
-\begin{frame}{\% of Theoretical Maximum Throughput for Intel x520 TX}
+\begin{frame}{\% of Theoretical Max. TX Throughput (Intel x520)}
 	\begin{figure}
 		\resizebox{.7\textwidth}{!}{\input{fig/pcie-lane-ratio}}
 	\end{figure}
-	{\footnotesize Theoretical Max. Throughput (PCIe gen2): \\ x1: 5GT/s, x2: 10GT/s, x4: 20GT/s, x8: 40GT/s}
+	{\footnotesize Theoretical Max. Throughput (PCIe gen2) * 0.8 (8b/10b overhead): \\
+	x1: 4Gbps, x2: 8Gbps, x4: 16Gbps, x8: 32Gbps}
 \end{frame}
-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%
 
-\begin{frame}[fragile]
-  \frametitle{mtheme}
+\begin{frame}[fragile,t]{NICのPCIe基礎体力測定 考察}
+	\vspace{-2em}
+	\begin{figure}
+		\resizebox{.8\textwidth}{!}{\input{fig/pcie-lane-ratio2}}
+	\end{figure}
+	\vspace{-1.5em}
 
-  The \emph{mtheme} is a Beamer theme with minimal visual noise inspired by the
-  \ehref{https://github.com/hsrmbeamertheme/hsrmbeamertheme}{\textsc{hsrm} Beamer
-  Theme} by Benjamin Weiss.
+	\begin{itemize}
+	\item PCIe利用可能帯域を計測することでNIC回路の性能を推測
+	\begin{itemize}
+		\item 送信のみの場合，PCIeの約81\%の帯域が利用可能
+		\item 送受信時，PCIeの約73\%の帯域が利用可能
+		\item 送受信時，1514B-60Bで約20\%利用可能帯域が減少
+		\item (PCIeはFull duplexにも関わらず) 60B送受信-送信のみ で，\\
+		      PCIe利用可能帯域が約18\%減少
+	\end{itemize}
 
-  Enable the theme by loading \faFrown
-
-  \begin{minted}[fontsize=\small]{latex}
-    \documentclass{beamer}
-    \usetheme{m}
-  \end{minted}
-
-  Note, that you have to have Mozilla's \emph{Fira Sans} font and XeTeX
-  installed to enjoy this wonderful typography.
+	\item 検討内容
+	\begin{enumerate}
+		\item パケットサイズとPCIe利用可能帯域の関係
+		\item Full duplexとPCIe利用可能帯域の関係
+	\end{enumerate}
+	\end{itemize}
 \end{frame}
 
-\begin{frame}[fragile]
-  \frametitle{Sections}
-  Sections group slides of the same topic
-
-  \begin{minted}[fontsize=\small]{latex}
-    \section{Elements}
-  \end{minted}
-
-  for which the \emph{mtheme} provides a nice progress indicator \ldots
-\end{frame}
-
-\section{Elements}
-
-\begin{frame}[fragile]
-  \frametitle{Typography}
-      \begin{minted}[fontsize=\small]{latex}
-The theme provides sensible defaults to \emph{emphasize}
-text, \alert{accent} parts or show \textbf{bold} results.
-      \end{minted}
-
-  \begin{center}becomes\end{center}
-
-  The theme provides sensible defaults to \emph{emphasize} text,
-  \alert{accent} parts or show \textbf{bold} results.
-\end{frame}
-\begin{frame}{Lists}
-  \begin{columns}[onlytextwidth]
-    \column{0.5\textwidth}
-      Items
-      \begin{itemize}
-        \item Milk \item Eggs \item Potatos
-      \end{itemize}
-
-    \column{0.5\textwidth}
-      Enumerations
-      \begin{enumerate}
-        \item First, \item Second and \item Last.
-      \end{enumerate}
-  \end{columns}
-\end{frame}
-\begin{frame}{Descriptions}
-  \begin{description}
-    \item[PowerPoint] Meeh.
-    \item[Beamer] Yeeeha.
-  \end{description}
-\end{frame}
-\begin{frame}{Animation}
-  \begin{itemize}[<+- | alert@+>]
-    \item \alert<4>{This is\only<4>{ really} important}
-    \item Now this
-    \item And now this
-  \end{itemize}
-\end{frame}
-\begin{frame}{Figures}
-  \begin{figure}
-    \newcounter{density}
-    \setcounter{density}{20}
-    \input{fig/rotate}
-    \caption{Rotated square from
-    \ehref{http://www.texample.net/tikz/examples/rotated-polygons/}{texample.net}.}
-  \end{figure}
-\end{frame}
-\begin{frame}{Tables}
-  \begin{table}
-    \caption{Largest cities in the world (source: Wikipedia)}
-    \begin{tabular}{lr}
-      \toprule
-      City & Population\\
-      \midrule
-      Mexico City & 20,116,842\\
-      Shanghai & 19,210,000\\
-      Peking & 15,796,450\\
-      Istanbul & 14,160,467\\
-      \bottomrule
-    \end{tabular}
-  \end{table}
-\end{frame}
-\begin{frame}{Blocks}
-
-  \begin{block}{This is a block title}
-    This is soothing.
-  \end{block}
-
-\end{frame}
-\begin{frame}{Math}
-  \begin{equation*}
-    e = \lim_{n\to \infty} \left(1 + \frac{1}{n}\right)^n
-  \end{equation*}
-\end{frame}
-\begin{frame}{Line plots}
-  \begin{figure}
-    \input{fig/line}
-  \end{figure}
-\end{frame}
-\begin{frame}{Bar charts}
-  \begin{figure}
-    \input{fig/bar}
-  \end{figure}
-\end{frame}
-\begin{frame}{Quotes}
-  \begin{quote}
-    Veni, Vidi, Vici
-  \end{quote}
-\end{frame}
-
+%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \section{Conclusion}
 
