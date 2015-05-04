@@ -76,7 +76,8 @@
     \vfill
     \ifx\inserttitle\@empty%
     \else%
-    {\raggedright\linespread{1.0}\usebeamerfont{title}\usebeamercolor[fg]{title}\scshape\MakeLowercase{\inserttitle}\par}%
+%    {\raggedright\linespread{1.0}\usebeamerfont{title}\usebeamercolor[fg]{title}\scshape\MakeLowercase{\inserttitle}\par}%
+    {\raggedright\linespread{1.0}\usebeamerfont{title}\usebeamercolor[fg]{title}\scshape\inserttitle\par}%
     \vspace*{0.5em}
     \fi%
     \ifx\insertsubtitle\@empty%
@@ -248,9 +249,10 @@
 \nointerlineskip
 \begin{beamercolorbox}[wd=\paperwidth,leftskip=0.3cm,rightskip=0.3cm,ht=2.5ex,dp=1.5ex]{frametitle}
 \if@protectFrameTitle
-  \usebeamerfont{frametitle}\MakeLowercase{\protect\insertframetitle}%
+%  \usebeamerfont{frametitle}\MakeLowercase{\protect\insertframetitle}%
+  \usebeamerfont{frametitle}\protect\insertframetitle%
 \else
-  \usebeamerfont{frametitle}\MakeLowercase{\insertframetitle}%
+  \usebeamerfont{frametitle}\insertframetitle%
 \fi
 \end{beamercolorbox}%
 \if@useTitleProgressBar
