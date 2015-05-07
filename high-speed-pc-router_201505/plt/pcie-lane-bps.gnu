@@ -10,9 +10,10 @@ set style fill transparent solid 0.8 border
 set grid nopolar
 set grid noxtics nomxtics ytics nomytics noztics nomztics \
  nox2tics nomx2tics noy2tics nomy2tics nocbtics nomcbtics
-set key bmargin left horizontal Left reverse noenhanced autotitles columnhead nobox
-#set key outside rght top vertical Left reverse noenhanced autotitles columnhead nobox
+set key bmargin left horizontal Left reverse noenhanced nobox
+#set key outside right top vertical Left reverse noenhanced autotitles columnhead nobox
 #set key invert samplen 4 spacing 1 width 0 height 0 
+
 set key samplen 3 spacing 2
 
 set grid layerdefault linetype 0 linewidth 1.000,  linetype 0 linewidth 1.000

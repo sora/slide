@@ -26,7 +26,7 @@
 
 \usemintedstyle{trac}
 
-\title{マルチポート10G NICの試作}
+\title{FPGA マルチポート10G NICの設計}
 \subtitle{}
 \date[\today]{}
 %\author{Name (\ehref{http://twitter.com/twitter}{\faTwitter  twitter})}
@@ -42,27 +42,13 @@
 \begin{frame}[fragile,t]{今日の話}
 \begin{enumerate}
 \item PCIe NICの基礎体力測定
-\item FPGA+SystemVerilogで合成可能なパケット処理を考える
 \item マルチポート10G NICの設計
 	\begin{itemize}
-	\item Motivation
+	\item FPGA+SystemVerilogで合成可能なパケット処理を考える
 	\item その他のFPGA NIC実装
-	\item NIC Offload機能の整理
 	\item 検討中のNICアーキテクチャ
 	\end{itemize}
 \end{enumerate}
-\end{frame}
-
-%% -------------------------------------------------- %%
-
-\begin{frame}[fragile,t]{その他のNIC実装}
-\begin{itemize}
-	\item VC709 Connectivity TRD
-	\begin{itemize}
-		\item 合成時間: 約2h
-	\end{itemize}
-	\item NetFPGA (NAAS)
-\end{itemize}
 \end{frame}
 
 %% -------------------------------------------------- %%
@@ -94,8 +80,312 @@
 
 %%%%%%%%%%%%%%%%%%%%%%%%%
 
+\begin{frame}[fragile,t]{今回のチャレンジ}
+
+前回: シングルポート1GE NIC
+\vspace{-.5em}
+\begin{itemize}
+\item Lattice ECP3 versa kit (1GEx2 + PCIe1.1)
+\item PCIE-TX: PIO write + write combining, RX: DMA write
+\item Linux Driver and Timestamp機能
+\end{itemize}
+
+\vspace{1em}
+
+今回: マルチポート10GE NIC
+\vspace{-.5em}
+\begin{itemize}
+\item KC705 (10GEx4 + PCIe gen2 x8) or NetFPGA-SUME
+\item PCIE: TX: DMA read, RX: DMA write
+\item 性能目標: 少なくとも10G 2ポートはline rate出したい
+\end{itemize}
+
+\end{frame}
+
+%%%
+
+\begin{frame}[fragile,t]{FPGA NICのどこらへんが難しいのか}
+
+いまのところ \textbf{マルチポート} らへんが課題
+\vspace{-.5em}
+\begin{itemize}
+\item Ethernetポートは増やせても使えるPCIe帯域は共通
+\item だめ回路ではマルチポートで性能がだせない可能性がある
+\end{itemize}
+
+\vspace{.5em}
+
+しかしマルチポートNICのPCIe利用帯域の見積もりは難しい
+\vspace{-.5em}
+\begin{itemize}
+\item ネットワークでは送受信マルチポート利用が前提
+\item PCIeのオーバヘッド(8b/10b, TLPヘッダなど)以外の特性を知りたい
+\item 逆にいうと，PCIeの利用可能帯域を効率よく使えるならば40GE以上も見えてくる
+\end{itemize}
+
+まずは市販NICでPCIeの現実に使える利用可能帯域を計測
+%\item あと，ここ1,2年で使えう用になったsystemverilogがとてもよかったので，その話もあとで少しだけ
+
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{frame}[fragile,t]{計測のねらい}
+
+\begin{itemize}
+\item Ethernetの性能を最大限出すために，現実的なPCIeの利用可能帯域を探りたい
+\item 一方で，市販NICはPCIe帯域に余裕を持って設計されているため，計測方法に工夫が必要
+\item 今回はIntel x520-SR2 (10GE x2)を用いて計測
+\end{itemize}
+\vspace{-1em}
+
+\begin{table}
+\small{Intel 82599: Host Interface Features\footnotemark}
+\begin{tabular}{l|l}
+	\toprule
+	PCIe Host Interface &  PCIe gen2 (2.5GT/s, 5GT/s)\\
+	Number of Lanes & x1, x2, x4, x8\\
+	\bottomrule
+\end{tabular}
+\end{table}
+
+意図的にNIC PCIeの使用レーン数を絞ることでThroughputを計測
+
+\footnotetext[1]{\ehref{http://www.intel.com/content/dam/www/public/us/en/documents/datasheets/82599-10-gbe-controller-datasheet.pdf}{(PDF) Intel 82599 10 GbE Controller Datasheet}}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{frame}[fragile,t]{計測環境}
+\vspace{-1em}
+\begin{table}
+\begin{tabular}{l|l}
+	\toprule
+	Host CPU & Intel Core i7 4770\\
+	NIC & Intel x520-SR2\\
+	\midrule
+	OS & BSD Router 1.55 (FreeBSD 10.1-RELEASE-p8)\\
+	Tool & netmap pkt-gen\\
+	\bottomrule
+\end{tabular}
+\end{table}
+
+\vspace{-1em}
+\begin{figure}
+\includegraphics[width=.9\textwidth]{fig/test.pdf}
+\end{figure}
+
+\end{frame}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{frame}{マスク(物理)}
+
+\begin{figure}
+\includegraphics[width=.9\textwidth]{pic/x1.png} \\
+\includegraphics[width=.9\textwidth]{pic/x4.png}
+
+\begin{scriptsize}
+\begin{tcolorbox}[width=.9\linewidth]
+\$ sudo lspci -vv\\
+01:00.0 Ethernet controller: Intel Corporation 82599ES\\
+LnkCap: Port \#0, \textbf{Speed 5GT/s, Width x8}, ... \\
+LnkSta: \textbf{Speed 5GT/s, Width x1}, ...
+\end{tcolorbox}
+\end{scriptsize}
+\vspace{-.5em}
+\small{上: x1マスク, 中: x4マスク, 下: x1時のLink status}
+\end{figure}
+
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\begin{frame}[fragile,t]{計測環境}
+
+\vspace{-1.5em}
+\begin{figure}
+\includegraphics[width=.9\textwidth]{fig/test2.pdf}
+\end{figure}
+
+\vspace{-1em}
+
+計測結果の注意点
+\vspace{-.5em}
+\begin{itemize}
+\item Softwareで試験パケットを生成しているので計測PPSに誤差が生じる
+\item もちろんx8の時に最大限PCIe性能がだせる回路と考えられるので，NICそのものの絶対評価ではない
+\end{itemize}
+
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{frame}{Max. TX Throughput}
+	\begin{figure}
+		\resizebox{.7\textwidth}{!}{\input{fig/pcie-lane-bps}}
+	\end{figure}
+	{\footnotesize Theoretical Max. Throughput (GT/s) * 8b/10b overhead (0.8): \\
+	x1: 4Gbps, x2: 8Gbps, x4: 16Gbps, x8: 32Gbps}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{frame}{\% of Max. TX Throughput}
+	\begin{figure}
+		\resizebox{.7\textwidth}{!}{\input{fig/pcie-lane-ratio}}
+	\end{figure}
+	{\footnotesize Theoretical Max. Throughput (GT/s) * 8b/10b overhead (0.8): \\
+	x1: 4Gbps, x2: 8Gbps, x4: 16Gbps, x8: 32Gbps}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{frame}[fragile,t]{NICのPCIe基礎体力測定 考察}
+	\vspace{-2em}
+	\begin{figure}
+		\resizebox{.8\textwidth}{!}{\input{fig/pcie-lane-ratio2}}
+	\end{figure}
+	\vspace{-1.5em}
+
+	PCIe利用可能帯域を計測することでNIC回路の性能を推測
+	\vspace{-.5em}
+	\begin{itemize}
+		\item 送信のみの場合，PCIeの約81\%の帯域が利用可能
+		\item 送受信時，PCIeの約73\%の帯域が利用可能
+		\item 送受信時，1514B-60Bで約20\%利用可能帯域が減少
+		\item (PCIeはFull duplexにも関わらず) 60B送受信-送信のみ \\
+		      で，PCIe利用可能帯域が約18\%減少
+	\end{itemize}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{frame}[fragile,t]{NICのPCIe基礎体力測定 考察}
+	\vspace{-2em}
+	\begin{figure}
+		\resizebox{.8\textwidth}{!}{\input{fig/pcie-lane-ratio2}}
+	\end{figure}
+	\vspace{-1.5em}
+
+	\begin{itemize}
+		\item PCIeの最大利用可能帯域の割合で見るとx1, x2で同じ傾向
+		\item x4(TXRX60B以外)とx8では，Ethernet帯域(10Gbps)を上回るので特性は見えない
+	\end{itemize}
+
+	\hspace{-0.5em}検討内容
+	\vspace{-.5em}
+	\begin{enumerate}
+		\item パケットサイズとPCIe利用可能帯域の関係
+		\item Full duplexとPCIe利用可能帯域の関係
+	\end{enumerate}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{frame}[fragile,t]{NICのおさらい}
+
+\hspace{-0.5em}パケット送信時のPCIe操作
+\vspace{-.5em}
+\begin{enumerate}
+	\item ドライバがNICのリングバッファのTail pointerを更新
+	\item DMA read
+	\item ドライバがリングバッファステータスの確認
+\end{enumerate}
+
+\hspace{-0.5em}パケット受信時のPCIe操作
+\vspace{-.5em}
+\begin{enumerate}
+	\item DMA write
+	\item ドライバがTail pointerを更新
+\end{enumerate}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{frame}[fragile,t]{PCIeのおさらい}
+
+\begin{itemize}
+	\item PCIeのメモリ操作は，送受信のレーンを使ってTLPパケットのやりとりが発生する
+	\item なので，Ethernetポートを送受信パケットでFull duplex専有しても，PCIeでは上り下りリンクの専有ができるわけではない ⇛ TLPパケットの送信待ちが発生する
+\end{itemize}
+
+
+\hspace{-0.5em}Ethernetパケット送信 (DMA read)
+\vspace{-.5em}
+\begin{enumerate}
+	\item TLP (Memory read)を送信
+	\item ACKとデータ付きコンプリーションを受信
+	\item コンプリーションに対するACKを送信
+\end{enumerate}
+
+\hspace{-0.5em}Ethernetパケット受信時 (DMA write)
+\vspace{-.5em}
+\begin{enumerate}
+	\item TLP (Memory write)を送信
+	\item ACKを受信
+\end{enumerate}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{frame}[fragile,t]{計測結果をどう考えるか}
+	\vspace{-2em}
+	\begin{figure}
+		\resizebox{.8\textwidth}{!}{\input{fig/pcie-lane-ratio2}}
+	\end{figure}
+	\vspace{-2em}
+
+	\begin{table}
+	\small{参考データ}
+	\begin{tabular}{l|l|l|l}
+		\toprule
+		  & Throughput & \%. gen3x8(64Gbps) & \%. gen3x16(128Gbps) \\
+		\midrule
+		10GE & 10Gbps & 15  & 8 \\
+		40GE & 40Gbps & 62  & 31 \\
+		100GE & 100Gbps & - & 78 \\
+		\bottomrule
+	\end{tabular}
+	\end{table}
+
+	\small{Xeon環境があるとPCMでもう少し詳細がわかりそう}
+
+	\small{NICのレーン数の変更はEEPROMの書き換えで変更できるかも}
+
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\plain{ざっくばらんに作成中のマルチポート10G NICの話}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{frame}[fragile,t]{FPGA開発環境の話}
+\begin{itemize}
+	\item Xilinx vivadoではSystemverilogで論理合成が可能になった
+	\vspace{-0.7em}
+	\begin{itemize}
+		\item 使える型が増えた (typedef, union, struct, enum, etc) \\
+		      ⇛ FPGA回路の合成時に型のチェックができるだけでもかなりうれしい
+		\item Classなど合成できないSVの機能はまだまだ多い
+		\item FPGAでのunionやenumはとても強力
+		\item VHDL, Verilog混在環境で合成可能
+	\end{itemize}
+	\item Systemverilogがとても良かったので合成可能なパケット処理を考えてみる
+	\begin{itemize}
+		\item Classなどが使えないのでOSSで公開されているような検証用ライブラリはそのままでは使えない
+		\item そこでLinuxのRaw socketぽくしてみる
+	\end{itemize}
+\end{itemize}
+\end{frame}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%
+
 \begin{frame}[fragile,t]
-  \frametitle{Systemverilogによるパケット処理 [2/3]}
+  \frametitle{Systemverilogによるパケット処理 [1/3]}
 
 \begin{figure}
 \begin{tcolorbox}[title=ethernet\_pkg.sv]
@@ -118,7 +408,7 @@ typedef struct packed {
 %%%%%%%%%%%%%%%%%%%%%%%
 
 \begin{frame}[fragile,t]
-  \frametitle{Systemverilogによるパケット処理 [1/3]}
+  \frametitle{Systemverilogによるパケット処理 [2/3]}
 
 \begin{figure}
 \begin{tcolorbox}[title=user\_app.sv]
@@ -166,95 +456,32 @@ if (rx_pkt.hdr.eth.h_proto == ETH_P_IP &&
 \end{minted}
 \end{tcolorbox}
 \end{figure}
-
+%http://www.intel.com/content/dam/www/public/us/en/documents/datasheets/82599-10-gbe-controller-datasheet.pdf
 \vspace{-.5em}
 Raw socket ぽい?
 \end{frame}
 
-
 %%%%%%%%%%%%%%%%%%%%%%%%%
 
-\begin{frame}{マスク(物理)}
-
-\begin{figure}
-\includegraphics[width=.9\textwidth]{pic/x1.png} \\
-\includegraphics[width=.9\textwidth]{pic/x4.png}
-
-\begin{scriptsize}
-\begin{tcolorbox}[width=.9\linewidth]
-\$ sudo lspci -vv\\
-01:00.0 Ethernet controller: Intel Corporation 82599ES\\
-LnkCap: Port \#0, \textbf{Speed 5GT/s, Width x8}, ... \\
-LnkSta: \textbf{Speed 5GT/s, Width x1}, ...
-\end{tcolorbox}
-\end{scriptsize}
-\vspace{-.5em}
-\small{上: x1マスク, 中: x4マスク, 下: x1時のLink status}
-\end{figure}
-
-
+\begin{frame}[fragile,t]{その他のFPGA NIC実装}
+\begin{itemize}
+	\item NetFPGA-10G
+	\item NetFPGA-SUME
+	\item KC705, VC709などのリファレンスNIC
+\end{itemize}
+論理合成に2から3時間かかる\faMeh
 \end{frame}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%
 
-\begin{frame}{Max. TX Throughput (Intel x520)}
-	\begin{figure}
-		\resizebox{.7\textwidth}{!}{\input{fig/pcie-lane-bps}}
-	\end{figure}
-	{\footnotesize Theoretical Max. Throughput (PCIe gen2) * 0.8 (8b/10b overhead): \\
-	x1: 4Gbps, x2: 8Gbps, x4: 16Gbps, x8: 32Gbps}
+\begin{frame}[fragile,t]{検討中のNICアーキテクチャ}
+%	\item 製品ではないので，できるだけシンプルに
+%	\item
 \end{frame}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%
-
-\begin{frame}{\% of Theoretical Max. TX Throughput (Intel x520)}
-	\begin{figure}
-		\resizebox{.7\textwidth}{!}{\input{fig/pcie-lane-ratio}}
-	\end{figure}
-	{\footnotesize Theoretical Max. Throughput (PCIe gen2) * 0.8 (8b/10b overhead): \\
-	x1: 4Gbps, x2: 8Gbps, x4: 16Gbps, x8: 32Gbps}
-\end{frame}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\begin{frame}[fragile,t]{NICのPCIe基礎体力測定 考察}
-	\vspace{-2em}
-	\begin{figure}
-		\resizebox{.8\textwidth}{!}{\input{fig/pcie-lane-ratio2}}
-	\end{figure}
-	\vspace{-1.5em}
-
-	\begin{itemize}
-	\item PCIe利用可能帯域を計測することでNIC回路の性能を推測
-	\begin{itemize}
-		\item 送信のみの場合，PCIeの約81\%の帯域が利用可能
-		\item 送受信時，PCIeの約73\%の帯域が利用可能
-		\item 送受信時，1514B-60Bで約20\%利用可能帯域が減少
-		\item (PCIeはFull duplexにも関わらず) 60B送受信-送信のみ で，\\
-		      PCIe利用可能帯域が約18\%減少
-	\end{itemize}
-
-	\item 検討内容
-	\begin{enumerate}
-		\item パケットサイズとPCIe利用可能帯域の関係
-		\item Full duplexとPCIe利用可能帯域の関係
-	\end{enumerate}
-	\end{itemize}
-\end{frame}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\section{Conclusion}
 
 \begin{frame}{Summary}
-
-  Get the source of this theme and the demo presentation from
-
-  \begin{center}\url{github.com/matze/mtheme}\end{center}
-
-  The theme \emph{itself} is licensed under a
-  \ehref{http://creativecommons.org/licenses/by-sa/4.0/}{Creative Commons
-  Attribution-ShareAlike 4.0 International License}.
 
 \end{frame}
 
