@@ -26,7 +26,7 @@
 
 \usemintedstyle{trac}
 
-\title{FPGA マルチポート10G NICの設計}
+\title{NICにおけるPCI Express性能の計測}
 \subtitle{}
 \date[\today]{}
 %\author{Name (\ehref{http://twitter.com/twitter}{\faTwitter  twitter})}
@@ -42,18 +42,17 @@
 \begin{frame}[fragile,t]{今日の話}
 \begin{enumerate}
 \item PCIe NICの基礎体力測定
-\item マルチポート10G NICの設計
+\item ざっくばらんにFPGA開発ネタ
 	\begin{itemize}
 	\item FPGA+SystemVerilogで合成可能なパケット処理を考える
 	\item その他のFPGA NIC実装
-	\item 検討中のNICアーキテクチャ
 	\end{itemize}
 \end{enumerate}
 \end{frame}
 
 %% -------------------------------------------------- %%
 
-\begin{frame}[fragile,t]{今日の話}
+\begin{frame}[fragile,t]{Motivation}
 
 ネットワークを高機能化するためにNICを自由に拡張したい
 \vspace{.5em}
@@ -86,7 +85,7 @@
 \vspace{-.5em}
 \begin{itemize}
 \item Lattice ECP3 versa kit (1GEx2 + PCIe1.1)
-\item PCIE-TX: PIO write + write combining, RX: DMA write
+\item PCIE-TX: PIO write + Write combining, RX: DMA write
 \item Linux Driver and Timestamp機能
 \end{itemize}
 
@@ -118,12 +117,12 @@
 しかしマルチポートNICのPCIe利用帯域の見積もりは難しい
 \vspace{-.5em}
 \begin{itemize}
-\item ネットワークでは送受信マルチポート利用が前提
-\item PCIeのオーバヘッド(8b/10b, TLPヘッダなど)以外の特性を知りたい
-\item 逆にいうと，PCIeの利用可能帯域を効率よく使えるならば40GE以上も見えてくる
+\item ネットワークではマルチポート送受信利用が前提だがPCIeは共有
+\item マルチポートEthernet利用時のTLP送信待ち時間が課題
+\item マルチポート40GE/100GE NICがきびしい理由を計測から考える
 \end{itemize}
 
-まずは市販NICでPCIeの現実に使える利用可能帯域を計測
+\textcolor{blue}{今回は，市販NICでPCIeの現実に使える利用可能帯域を計測}
 %\item あと，ここ1,2年で使えう用になったsystemverilogがとてもよかったので，その話もあとで少しだけ
 
 \end{frame}
@@ -180,7 +179,7 @@
 
 %%%%%%%%%%%%%%%%%%%%%%%%%
 
-\begin{frame}{マスク(物理)}
+\begin{frame}{テープを使ってPCIeスロットを物理マスク}
 
 \begin{figure}
 \includegraphics[width=.9\textwidth]{pic/x1.png} \\
@@ -287,18 +286,20 @@ LnkSta: \textbf{Speed 5GT/s, Width x1}, ...
 
 \begin{frame}[fragile,t]{NICのおさらい}
 
-\hspace{-0.5em}パケット送信時のPCIe操作
+\hspace{-0.5em}
+\textcolor{blue}{パケット送信時のPCIe操作}
 \vspace{-.5em}
 \begin{enumerate}
 	\item ドライバがNICのリングバッファのTail pointerを更新
-	\item DMA read
-	\item ドライバがリングバッファステータスの確認
+	\item データ転送 (DMA read)
+	\item Write-back the NIC status
 \end{enumerate}
 
-\hspace{-0.5em}パケット受信時のPCIe操作
+\hspace{-0.5em}
+\textcolor{blue}{パケット受信時のPCIe操作}
 \vspace{-.5em}
 \begin{enumerate}
-	\item DMA write
+	\item データ転送 (DMA write)
 	\item ドライバがTail pointerを更新
 \end{enumerate}
 \end{frame}
@@ -308,12 +309,12 @@ LnkSta: \textbf{Speed 5GT/s, Width x1}, ...
 \begin{frame}[fragile,t]{PCIeのおさらい}
 
 \begin{itemize}
-	\item PCIeのメモリ操作は，送受信のレーンを使ってTLPパケットのやりとりが発生する
-	\item なので，Ethernetポートを送受信パケットでFull duplex専有しても，PCIeでは上り下りリンクの専有ができるわけではない ⇛ TLPパケットの送信待ちが発生する
+	\item PCIeのメモリ操作は送受信のレーンを使ってTLPパケットの通信が発生
+	\item Ethernetポートを送受信パケットでFull duplex専有しても，PCIeでは上り下りリンクの専有ができるわけではない ⇛ TLPパケットの送信待ちが発生する
 \end{itemize}
 
-
-\hspace{-0.5em}Ethernetパケット送信 (DMA read)
+\hspace{-0.5em}
+\textcolor{blue}{Ethernetパケット送信 (DMA read)}
 \vspace{-.5em}
 \begin{enumerate}
 	\item TLP (Memory read)を送信
@@ -321,7 +322,8 @@ LnkSta: \textbf{Speed 5GT/s, Width x1}, ...
 	\item コンプリーションに対するACKを送信
 \end{enumerate}
 
-\hspace{-0.5em}Ethernetパケット受信時 (DMA write)
+\hspace{-0.5em}
+\textcolor{blue}{Ethernetパケット受信時 (DMA write)}
 \vspace{-.5em}
 \begin{enumerate}
 	\item TLP (Memory write)を送信
@@ -359,7 +361,7 @@ LnkSta: \textbf{Speed 5GT/s, Width x1}, ...
 
 %%%%%%%%%%%%%%%%%%%%%%%%%
 
-\plain{ざっくばらんに作成中のマルチポート10G NICの話}
+\plain{ざっくばらんにFPGA開発ネタ}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -465,24 +467,27 @@ Raw socket ぽい?
 
 \begin{frame}[fragile,t]{その他のFPGA NIC実装}
 \begin{itemize}
-	\item NetFPGA-10G
-	\item NetFPGA-SUME
+	\item NetFPGA-10G (最近1ポート10Gラインレート対応)
+	\item NetFPGA-SUME (リファレンス回路待ち)
 	\item KC705, VC709などのリファレンスNIC
 \end{itemize}
-論理合成に2から3時間かかる\faMeh
-\end{frame}
-
-%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\begin{frame}[fragile,t]{検討中のNICアーキテクチャ}
-%	\item 製品ではないので，できるだけシンプルに
-%	\item
+それぞれ論理合成に2から3時間かかる\faMeh
 \end{frame}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%
 
 \begin{frame}{Summary}
 
+\begin{itemize}
+	\item 実験用のFPGA NIC回路を作るために，まずは市販NICのPCIe帯域を計測
+	\begin{itemize}
+		\item PCIeの使用レーンを減らすことでPCIe利用可能帯域を計測
+		\item Ethert送受信時はPCIeの利用可能帯域が60\%前後まで下がった
+		\item NICはEthernetの広帯域化に従って，PCIe利用可能帯域の効率化が課題になる
+	\end{itemize}
+	\item 100GE NIC以降はNIC間をデイジーチェーンでつないでPCIe帯域を増やすアプローチもあるらしい
+	\item 今後は現在一般的なNICリングバッファ構造以外の方法を検討
+\end{itemize}
 \end{frame}
 
 \plain{Questions? \faSmile}
