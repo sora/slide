@@ -1,0 +1,12 @@
+\begin{tikzpicture}
+	\begin{axis}[
+		mlineplot,
+		width=0.9\textwidth,
+		height=6cm,
+	]
+
+	\addplot {sin(deg(x))};
+	\addplot+[samples=100] {sin(deg(2*x))};
+
+	\end{axis}
+\end{tikzpicture}
