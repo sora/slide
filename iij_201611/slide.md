@@ -23,9 +23,7 @@
 ---
 
 # アプローチ(1/2)
-
-* 高PPS処理には、netmap/DPDKなどのkernel bypass機能が必要
-* 今回は、Linux kernelの機能も使いたいので、
+### Vanilla driverを使いつつ11Mpps処理のパケットIOを考える
 
 ![](https://raw.githubusercontent.com/sora/slide/master/iij_201611/images/approach1.png)
 
@@ -33,24 +31,21 @@
 
 # アプローチ(2/2)
 
-* Linuxデバイスドライバを使いつつ、11Mpps程度をさばくパケットIOを考える
-* 10GE環境の高PPSパケット処理方法は、現Linux kernelとnetmap\[ATC'12\]でかなり整理されている
+* 10GE環境の高PPSパケット処理方法は、Linux netdevとnetmap\[ATC'12\]でかなり整理されている
 * 本検討(mgcap)でのアプローチ
   - 水平方向の性能改善
     * NIC TX/RX multiqueueを利用
     * Packet input/outputまでの処理を(できるだけ)cpu coreでisolation
   - 垂直方向の性能改善
-    * パケット処理プロセスがデバイスを占有
-    * kernel(qdisc)-bypass
+    * qdisc-bypass
     * Bulk packet read/write (system call数の削減)
-  - その他
-    * DPDKのような事前設定やコンフィグはしない
+    * パケット処理プロセスがデバイスを占有
+
 ---
 
 # Linuxのバニラドライバを用いたBypass Net.IOのうれしさ
 
 *
-
 
 ---
 
