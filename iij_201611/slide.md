@@ -6,43 +6,78 @@
 
 ---
 
-# ねらい
+# 高精度時刻同期+DC環境でのネットワーク計測を検討
 
-* 現在の高精度時刻同期されたDC環境を踏まえて、ネットワーク計測環境の整備を考える
-*
-
+* 想定アプリケーション
+  - DCにおける、パケットキャプチャ、ping/OWD, ジッタ計測, など
+* 必要機能
+  - Linux kernel, デバイスドライバで実現される各種機能 (PTP, VM環境, 仮想ネットワーク機能, etc)
+  - Hardware支援を用いたパケットタイムスタンピング
 * 性能目標
-  - 一般的にDC環境における平均パケット長は、ユーザ環境に比べてとても短い
-  - 極端な例としては、Facebookで200 Byte以下[SIGCOMM'15]、Googleで100 Byte程度[NSDI'16]
-  - 10GE環境平均パケット長100 Byteは、11M pps程度のパケット処理性能が必要
-* 必要な機能
-  - PTPd, VM環境(仮想ネットワーク機能)との併用
-  -
+  - 一般的なユーザ環境に比べて、DC環境における平均パケット長はとても短い
+  - 極端な例
+    * Facebookで(Hadoopクラスタを除くと)200Byte以下 \[SIGCOMM'15\]
+    * Googleで100Byte程度 \[NSDI'16\]
+  - 10GE+平均パケット長100Bは11Mpps程度のパケット処理性能が必要
 
 ---
 
 # アプローチ
 
-* Yet Another kernel-bypass network IO
+* Linuxデバイスドライバを使いつつ、11Mpps程度をさばくパケットIOを考える
+* 10GE環境の高PPSパケット処理方法は、現Linux kernelとnetmap\[ATC'12\]でかなり整理されている
+* 本検討(mgcap)でのアプローチ
+  - 水平方向の性能改善
+    * NIC TX/RX multiqueueを利用
+    * Packet input/outputまでの処理を(できるだけ)cpu coreでisolation
+  - 垂直方向の性能改善
+    * パケット処理プロセスがデバイスを占有
+    * kernel(qdisc)-bypass
+    * Bulk packet read/write (system call数の削減)
+  - その他
+    * DPDKのような事前設定やコンフィグはしない
+---
 
-* 高精度タイムスタンピング
+# 他手法との対比
 
+![](https://raw.githubusercontent.com/sora/slide/master/iij_201611/images/approach.png)
+
+---
+
+# NIC TX/RX multiqueueの利用
+
+---
+
+# (できるだけ)パケット処理をcpu coreごとで行う
+
+---
+
+# Qdisc-bypass
+
+---
+
+# Bulk packet read/write (system call数の削減)
+
+---
+
+# (option) 使い方
+
+---
+# LinuxにおけるネットワークIOの性能の考え方
+
+* 10Gbps以降のNIC性能は、
+
+* 水平方向と垂直方向の性能を考える必要がある
 
 ---
 
 # Two column layout
 
-![](images/overview.png)
+![](https://raw.githubusercontent.com/sora/slide/master/iij_201611/images/overview.png)
 
 {.column}
 
-1.
-
----
-
-# Approach
-
-![](images/approach.png)
+1. hoge
 
 ---
 
