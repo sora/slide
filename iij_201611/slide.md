@@ -9,8 +9,8 @@
 # 高精度時刻同期+DC環境でのネットワーク計測を検討
 
 * 想定アプリケーション
-  - DCにおける、パケットキャプチャ、ping/OWD, ジッタ計測, など
-* 必要機能
+  - DCにおけるパケットキャプチャ、ping/OWD, ジッタ計測, など
+* ほしい機能
   - Linux kernel, デバイスドライバで実現される各種機能 (PTP, VM環境, 仮想ネットワーク機能, etc)
   - Hardware支援を用いたパケットタイムスタンピング
 * 性能目標
@@ -22,7 +22,16 @@
 
 ---
 
-# アプローチ
+# アプローチ(1/2)
+
+* 高PPS処理には、netmap/DPDKなどのkernel bypass機能が必要
+* 今回は、Linux kernelの機能も使いたいので、
+
+![](https://raw.githubusercontent.com/sora/slide/master/iij_201611/images/approach1.png)
+
+---
+
+# アプローチ(2/2)
 
 * Linuxデバイスドライバを使いつつ、11Mpps程度をさばくパケットIOを考える
 * 10GE環境の高PPSパケット処理方法は、現Linux kernelとnetmap\[ATC'12\]でかなり整理されている
@@ -38,9 +47,16 @@
     * DPDKのような事前設定やコンフィグはしない
 ---
 
+# Linuxのバニラドライバを用いたBypass Net.IOのうれしさ
+
+*
+
+
+---
+
 # 他手法との対比
 
-![](https://raw.githubusercontent.com/sora/slide/master/iij_201611/images/approach.png)
+![](https://raw.githubusercontent.com/sora/slide/master/iij_201611/images/approach2.png)
 
 ---
 
