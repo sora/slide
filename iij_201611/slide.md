@@ -9,106 +9,122 @@
 # 高精度時刻同期+DC環境でのネットワーク計測を検討
 
 * 想定アプリケーション
-  - DCにおけるパケットキャプチャ、ping/OWD, ジッタ計測, など
+  - パケットキャプチャ、ping/OWD, ジッタ計測など
 * ほしい機能
-  - Linux kernel, デバイスドライバで実現される各種機能 (PTP, VM環境, 仮想ネットワーク機能, etc)
+  - Linuxの各種機能との併用 (PTP, VM, 仮想ネットワーク機能, etc)
   - Hardware支援を用いたパケットタイムスタンピング
-* 性能目標
-  - 一般的なユーザ環境に比べて、DC環境における平均パケット長はとても短い
-  - 極端な例
-    * Facebookで(Hadoopクラスタを除くと)200Byte以下 \[SIGCOMM'15\]
-    * Googleで100Byte程度 \[NSDI'16\]
-  - 10GE+平均パケット長100Bは11Mpps程度のパケット処理性能が必要
+  - 10GEが整備されたデータセンタで十分機能する性能
 
 ---
 
-# アプローチ(1/2)
-### Vanilla driverを使いつつ11Mpps処理のパケットIOを考える
+# 性能目標
 
-![](https://raw.githubusercontent.com/sora/slide/master/iij_201611/images/approach1.png)
+* 一般的なユーザ環境に比べて、DC環境における平均パケット長はとても短い
+* 極端な例
+  - Facebookで(Hadoopクラスタを除くと)200Byte以下 \[SIGCOMM'15\]
+  - Googleで100Byte程度 \[NSDI'16\]
+    * 10GE+平均パケット長100Bは11Mpps程度のパケット処理性能が必要
+* 今回は、Vanilla driverを使いつつ11Mpps処理のパケットIOを考える
 
 ---
 
-# アプローチ(2/2)
+# アプローチ
 
-* 10GE環境の高PPSパケット処理方法は、Linux netdevとnetmap\[ATC'12\]でかなり整理されている
-* 本検討(mgcap)でのアプローチ
-  - 水平方向の性能改善
-    * NIC TX/RX multiqueueを利用
-    * Packet input/outputまでの処理を(できるだけ)cpu coreでisolation
+![](https://raw.githubusercontent.com/sora/slide/master/iij_201611/images/approach.png)
+
+{.column}
+
+* 高PPSパケット処理は、Linux kernelとnetmap\[ATC'12\]を参考にする
+* 本実装で使うアプローチ
   - 垂直方向の性能改善
     * qdisc-bypass
-    * Bulk packet read/write (system call数の削減)
-    * パケット処理プロセスがデバイスを占有
+    * Bulk packet read/write
+  - 水平方向の性能改善
+    * Multi-core CPU
+    * Multi-queue NIC
 
 ---
 
-# Linuxのバニラドライバを用いたBypass Net.IOのうれしさ
+# qdis-bypass
 
-*
-
----
-
-# 他手法との対比
-
-![](https://raw.githubusercontent.com/sora/slide/master/iij_201611/images/approach2.png)
+![](https://raw.githubusercontent.com/sora/slide/master/iij_201611/images/bypass.png)
 
 ---
 
-# NIC TX/RX multiqueueの利用
+# Bulk packet read/write
+
+hoge
 
 ---
 
-# (できるだけ)パケット処理をcpu coreごとで行う
+# Multi-core CPU
+
+```c
+// kernel
+
+
+```
 
 ---
 
-# Qdisc-bypass
+# Multi-queue NIC
+
+moge
 
 ---
 
-# Bulk packet read/write (system call数の削減)
-
----
-
-# (option) 使い方
-
----
-# LinuxにおけるネットワークIOの性能の考え方
-
-* 10Gbps以降のNIC性能は、
-
-* 水平方向と垂直方向の性能を考える必要がある
-
----
-
-# Two column layout
+# mgcap (PacketIO) + mgdump(Packet capture)
 
 ![](https://raw.githubusercontent.com/sora/slide/master/iij_201611/images/overview.png)
 
 {.column}
 
-1. hoge
+* パケットキャプチャツール
+* ほぼすべてのLinuxのnetdeviceで動作
+* PCAP with high-resolution timestamping (e.g., Intel X550, etc)
+* 96 Byte snaplen (default value)
+* iproute2コマンドでのコンフィグ(廃止予定)
 
 ---
 
-# Slides can have an inline image
+# 使い方
 
-![](https://source.unsplash.com/WLUHO9A_xik/1600x900)
+```bash
+# packet capture
+$ insmod kmod/mgcap.ko
+$ ./ip/ip mgcap lo
+$ ./ip/ip mgcap set dev lo mode drop
+$ ls /dev/mgcap/lo
+$ cd mgcap; ./mgdump /dev/mgcap/lo
+$ ping 127.0.0.1 &
+$ tshark -r ./output0.pcap
+$ rmmod mgcap
+
+# set HWTStamp
+$ cd src/tools
+$ ./mgcap_hwtstamp_config enp1s0f1 1
+```
 
 ---
 
-# Slides local images
+# HPIO (Hayai Packet IO)
+
+* 今回のmgcapからkernel moduleを取り出して汎用化したもの (with upa)
+* 対応(予定)機能
+  - 汎用パケットIO化 (snaplenを取り除く)
+  - 送信機能 (writev with O_NONBLOCK?)
+  - read/write --> readv/writev
+  - 仮想デバイス
+* アプリケーション
+  - Bridge/Forwarding
+  - pktgen
+  - Metric monitoring
 
 ---
 
-# Slides can have many images
+# pcapとpcap-ngにおけるナノ秒TStamp対応
 
-![](https://www.gstatic.com/images/branding/product/2x/drive_36dp.png){pad=10}
-![](https://www.gstatic.com/images/branding/product/2x/docs_36dp.png){pad=10}
-![](https://www.gstatic.com/images/branding/product/2x/sheets_36dp.png){pad=10}
-![](https://www.gstatic.com/images/branding/product/2x/slides_36dp.png){pad=10}
-![](https://www.gstatic.com/images/branding/product/2x/forms_36dp.png){pad=10}
+hoge
 
 ---
 
