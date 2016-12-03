@@ -10,7 +10,7 @@
 
 * 想定アプリケーション
   - パケットキャプチャ、ping/OWD, ジッタ計測など
-* ほしい機能
+* サポートしたい機能
   - Linuxの各種機能との併用 (PTP, VM, 仮想ネットワーク機能, etc)
   - Hardware支援を用いたパケットタイムスタンピング
   - 10GEが整備されたデータセンタで十分機能する性能
@@ -155,9 +155,9 @@ static ssize_t mgcap_read(...) {
 # Multi-core CPUサポート
 
 * User space
-  - 使用cpu coreごとでファイルディスクリプタをopen(2)
+  - CPU coreごとにmgcapデバイスをopen(2)
   - pthreadを利用
-  - さらにCPUコアごとでthreadを立ち上げるためにpthread_setaffinity_npを利用
+  - CPUコアごとでthreadを立ち上げるためにpthread_setaffinity_npを利用
 * kernel space
   - read(2)は、各cpu coreごとに呼ばれるため、smp_processor_id()で判定
     * `struct rxring *rx = &mgc->rxrings[smp_processor_id()];`
