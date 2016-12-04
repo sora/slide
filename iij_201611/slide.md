@@ -110,19 +110,19 @@ $ ./mgcap_hwtstamp_config enp1s0f1 1
 
 ---
 
-$ mgdump /dev/mgcap/enp1s0f1
+# $ mgdump /dev/mgcap/enp1s0f1
 
 ```bash
 ~/wrk/mgcap/src/mgdump# ./mgdump /dev/mgcap/enp1s0f1
 ncpus=8
 mgdump: thread 0: start. cur_cpu=0
 mgdump: thread 1: start. cur_cpu=1
-mgdump: thread 2: start. cur_cpu=1
-mgdump: thread 3: start. cur_cpu=1
-mgdump: thread 4: start. cur_cpu=1
-mgdump: thread 5: start. cur_cpu=1
-mgdump: thread 6: start. cur_cpu=1
-mgdump: thread 7: start. cur_cpu=1
+mgdump: thread 2: start. cur_cpu=2
+mgdump: thread 3: start. cur_cpu=3
+mgdump: thread 4: start. cur_cpu=4
+mgdump: thread 5: start. cur_cpu=5
+mgdump: thread 6: start. cur_cpu=6
+mgdump: thread 7: start. cur_cpu=7
 0:0     1:0     2:0     3:0     4:0     5:0     6:0     7:0     sum:0   pps:0
 0:0     1:0     2:0     3:0     4:0     5:0     6:0     7:0     sum:0   pps:0
 0:0     1:1903079    2:1036794 ... 7:1037943   sum:8095376     pps:8095376
@@ -163,7 +163,7 @@ static ssize_t mgcap_read(...) {
     ...
 
     if (ring_empty(&rx->buf))
-    return 0;
+        return 0;
 
     copy_len = ring_count(&rx->buf);
 
@@ -231,9 +231,9 @@ static ssize_t mgcap_read(...) {
 
 ---
 
-# HPIO (Hayai Packet IO)
+# HPIO: Hayai Packet IO
 
-* mgcapからkernel moduleを取り出して汎用化したもの (with upa)
+* 十分性能が出たので汎用化を検討
 * 対応(予定)機能
   - 汎用パケットIO化 (snaplenを取り除く)
   - 送信機能 (writev with O_NONBLOCK?)
@@ -244,5 +244,3 @@ static ssize_t mgcap_read(...) {
   - Bridge/Forwarding
   - pktgen
   - Metric monitoring
-
----
