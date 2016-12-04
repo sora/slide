@@ -213,7 +213,7 @@ static ssize_t mgcap_read(...) {
 
 # 受信性能 (Disable HWTstamp)
 
-![](https://raw.githubusercontent.com/sora/slide/master/iij_201611/images/result_throughput_BothHWQueue.png)
+![](https://raw.githubusercontent.com/sora/slide/master/iij_201611/images/BothHWQueue.png)
 
 ---
 
