@@ -86,7 +86,7 @@
 
 # mgcap(PacketIO) + mgdump(Packet capture)
 
-![](https://raw.githubusercontent.com/sora/slide/master/iij_201611/images/overview.png)
+![](https://raw.githubusercontent.com/sora/slide/master/iij_201611/images/mgdump.png)
 
 ---
 
@@ -207,7 +207,7 @@ static ssize_t mgcap_read(...) {
   - single HWQueue = 同一ホストからのUDP/TCPストリームなど
 * そこで、パフォーマンスは以下の2シナリオで計測
   - Single HWQueue
-  - Multi HWQueue: 送信側ホストで、source IP addrをインクリメンタルで回す
+  - Multi HWQueue: 送信側ホストでsource IP addrをインクリメンタルで回す
 
 ---
 
@@ -219,7 +219,7 @@ static ssize_t mgcap_read(...) {
 
 # まとめ
 
-![](https://raw.githubusercontent.com/sora/slide/master/iij_201611/images/overview.png)
+![](https://raw.githubusercontent.com/sora/slide/master/iij_201611/images/mgdump.png)
 
 {.column}
 

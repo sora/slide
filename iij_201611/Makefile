@@ -5,6 +5,5 @@ FILE = slide.md
 all: slide
 
 slide:
-	md2gslides -e -a $(ID) $(FILE)
-
+	md2gslides -e -a $(ID) $(FILE) --style rainbow
 
