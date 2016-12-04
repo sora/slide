@@ -219,6 +219,15 @@ static ssize_t mgcap_read(...) {
 
 # まとめ
 
+![](https://raw.githubusercontent.com/sora/slide/master/iij_201611/images/overview.png)
+
+{.column}
+
+* ネットワーク計測用のPacketIO実装
+* サンプルアプリとしてパケットキャプチャツール
+* NIC(もしくはデバイスドライバ)の性能制限があるものの
+  - MultiHWQueueでは、パケット長100Byteで10Gbpsを達成
+  - SingleHWQueueは今後の課題
 
 ---
 
